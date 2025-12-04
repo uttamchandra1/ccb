@@ -1,0 +1,14 @@
+spring.application.name=ccbapp
+
+# PostgreSQL Database Configuration
+spring.datasource.url=jdbc:postgresql://localhost:5433/ccbdb
+spring.datasource.username=postgres
+spring.datasource.password=YOUR_DB_PASSWORD
+spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
+spring.jpa.hibernate.ddl-auto=update
+
+# Google OAuth2 Configuration
+# Get your credentials from: https://console.cloud.google.com/apis/credentials
+spring.security.oauth2.client.registration.google.client-id=YOUR_CLIENT_ID
+spring.security.oauth2.client.registration.google.client-secret=YOUR_CLIENT_SECRET
+spring.security.oauth2.client.registration.google.scope=openid,profile,email,https://www.googleapis.com/auth/userinfo.profile,https://www.googleapis.com/auth/userinfo.email
