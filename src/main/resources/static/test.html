@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Credit Card Detection - Test Page</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 800px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 0.9em;
+        }
+
+        .status {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        .status.info {
+            background: #e3f2fd;
+            color: #1976d2;
+            border-left: 4px solid #1976d2;
+        }
+
+        .status.success {
+            background: #e8f5e9;
+            color: #388e3c;
+            border-left: 4px solid #388e3c;
+        }
+
+        .status.error {
+            background: #ffebee;
+            color: #c62828;
+            border-left: 4px solid #c62828;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin: 10px 5px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .cards-container {
+            margin-top: 30px;
+        }
+
+        .card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .card-bank {
+            font-size: 1.3em;
+            font-weight: 700;
+        }
+
+        .card-type {
+            background: rgba(255, 255, 255, 0.3);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+        }
+
+        .card-number {
+            font-size: 1.5em;
+            letter-spacing: 2px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+        }
+
+        .card-details {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 15px;
+            font-size: 0.9em;
+        }
+
+        .confidence {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .empty-state svg {
+            width: 100px;
+            height: 100px;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+
+        pre {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 10px;
+            overflow-x: auto;
+            font-size: 0.85em;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>💳 Credit Card Detection</h1>
+        <p class="subtitle">Scan your Gmail for credit card information</p>
+
+        <div id="status" class="status info">
+            ℹ️ Please login first to scan your Gmail
+        </div>
+
+        <div>
+            <button class="btn" onclick="window.location.href='/login'">
+                🔐 Login with Google
+            </button>
+            <button class="btn btn-secondary" id="scanBtn" onclick="scanGmail()" disabled>
+                🔍 Scan Gmail
+            </button>
+            <button class="btn" onclick="checkStatus()">
+                ✅ Check Status
+            </button>
+        </div>
+
+        <div class="cards-container" id="cardsContainer"></div>
+    </div>
+
+    <script>
+        let isAuthenticated = false;
+
+        // Check if user is authenticated on page load
+        window.onload = async function () {
+            await checkStatus();
+        };
+
+        async function checkStatus() {
+            try {
+                const response = await fetch('/api/card-detection/status');
+                const data = await response.json();
+
+                if (response.ok && data.gmailConnected) {
+                    isAuthenticated = true;
+                    document.getElementById('scanBtn').disabled = false;
+                    document.getElementById('status').className = 'status success';
+                    document.getElementById('status').innerHTML = `
+                        ✅ Authenticated as ${data.userEmail || 'User'}<br>
+                        Gmail connected: ${data.gmailConnected ? 'Yes' : 'No'}
+                    `;
+                } else {
+                    document.getElementById('status').className = 'status info';
+                    document.getElementById('status').innerHTML = 'ℹ️ Please login first to scan your Gmail';
+                }
+            } catch (error) {
+                console.error('Status check failed:', error);
+                document.getElementById('status').className = 'status error';
+                document.getElementById('status').innerHTML = '❌ Not authenticated. Please login first.';
+            }
+        }
+
+        async function scanGmail() {
+            const scanBtn = document.getElementById('scanBtn');
+            const statusDiv = document.getElementById('status');
+            const cardsContainer = document.getElementById('cardsContainer');
+
+            // Disable button and show loading
+            scanBtn.disabled = true;
+            scanBtn.innerHTML = '<span class="loading"></span> Scanning...';
+            statusDiv.className = 'status info';
+            statusDiv.innerHTML = '🔍 Scanning your Gmail for credit cards...';
+            cardsContainer.innerHTML = '';
+
+            try {
+                const response = await fetch('/api/card-detection/scan', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    statusDiv.className = 'status success';
+                    statusDiv.innerHTML = `✅ Scan completed! Found ${data.cardsDetected} card(s)`;
+
+                    if (data.cards && data.cards.length > 0) {
+                        displayCards(data.cards);
+                    } else {
+                        cardsContainer.innerHTML = `
+                            <div class="empty-state">
+                                <svg viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/>
+                                </svg>
+                                <h3>No cards detected</h3>
+                                <p>No credit card emails found in your Gmail</p>
+                            </div>
+                        `;
+                    }
+                } else {
+                    statusDiv.className = 'status error';
+                    statusDiv.innerHTML = `❌ ${data.message || 'Scan failed'}`;
+                }
+            } catch (error) {
+                console.error('Scan failed:', error);
+                statusDiv.className = 'status error';
+                statusDiv.innerHTML = `❌ Error: ${error.message}`;
+            } finally {
+                scanBtn.disabled = false;
+                scanBtn.innerHTML = '🔍 Scan Gmail';
+            }
+        }
+
+        function displayCards(cards) {
+            const container = document.getElementById('cardsContainer');
+            container.innerHTML = '<h2 style="margin-bottom: 20px;">Detected Cards</h2>';
+
+            cards.forEach(card => {
+                const cardDiv = document.createElement('div');
+                cardDiv.className = 'card';
+                cardDiv.innerHTML = `
+                    <div class="card-header">
+                        <div class="card-bank">${card.bankName || 'Unknown Bank'}</div>
+                        <div class="card-type">${card.cardType || 'UNKNOWN'}</div>
+                    </div>
+                    <div class="card-number">**** **** **** ${card.last4Digits}</div>
+                    <div class="card-details">
+                        <div>
+                            <strong>Expiry:</strong> ${card.expiryDate || 'N/A'}<br>
+                            <strong>Nickname:</strong> ${card.cardNickname || 'N/A'}
+                        </div>
+                        <div class="confidence">
+                            Confidence: ${Math.round((card.confidenceScore || 0) * 100)}%
+                        </div>
+                    </div>
+                    ${card.emailSubject ? `<div style="margin-top: 10px; font-size: 0.85em; opacity: 0.8;">From: ${card.emailSubject}</div>` : ''}
+                `;
+                container.appendChild(cardDiv);
+            });
+        }
+    </script>
+</body>
+
+</html>
