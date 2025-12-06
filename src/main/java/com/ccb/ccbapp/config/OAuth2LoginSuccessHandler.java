@@ -1,7 +1,6 @@
 package com.ccb.ccbapp.config;
 
-import com.ccb.ccbapp.entity.User;
-import com.ccb.ccbapp.repository.UserRepository;
+import com.ccb.ccbapp.service.UserService;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -11,37 +10,35 @@ import org.springframework.security.web.authentication.SavedRequestAwareAuthenti
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.util.Optional;
 
+/**
+ * Custom success handler for OAuth2 login.
+ * Persists user information after successful Google authentication.
+ */
 @Component
 public class OAuth2LoginSuccessHandler extends SavedRequestAwareAuthenticationSuccessHandler {
 
-    private final UserRepository userRepository;
+    private final UserService userService;
 
-    public OAuth2LoginSuccessHandler(UserRepository userRepository) {
-        this.userRepository = userRepository;
+    public OAuth2LoginSuccessHandler(UserService userService) {
+        this.userService = userService;
     }
 
     @Override
-    public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
-            Authentication authentication) throws ServletException, IOException {
-        OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
-        String email = oAuth2User.getAttribute("email");
-        String name = oAuth2User.getAttribute("name");
-        String pictureUrl = oAuth2User.getAttribute("picture");
+    public void onAuthenticationSuccess(HttpServletRequest request,
+            HttpServletResponse response,
+            Authentication authentication) throws IOException, ServletException {
+        OAuth2User oauthUser = (OAuth2User) authentication.getPrincipal();
 
-        Optional<User> userOptional = userRepository.findByEmail(email);
-        if (userOptional.isEmpty()) {
-            User newUser = new User(email, name, pictureUrl);
-            userRepository.save(newUser);
-        } else {
-            User existingUser = userOptional.get();
-            existingUser.setName(name);
-            existingUser.setPictureUrl(pictureUrl);
-            userRepository.save(existingUser);
-        }
+        String email = oauthUser.getAttribute("email");
+        String name = oauthUser.getAttribute("name");
+        String pictureUrl = oauthUser.getAttribute("picture");
 
-        super.setDefaultTargetUrl("/user");
+        // Use service layer to create or update user
+        userService.createOrUpdateUser(email, name, pictureUrl);
+
+        // Redirect to /user after successful login
+        setDefaultTargetUrl("/user");
         super.onAuthenticationSuccess(request, response, authentication);
     }
 }

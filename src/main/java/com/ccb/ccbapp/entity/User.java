@@ -1,10 +1,8 @@
 package com.ccb.ccbapp.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "users")
@@ -17,6 +15,10 @@ public class User {
     private String email;
     private String name;
     private String pictureUrl;
+
+    // OneToMany relationship: One user can have many credit cards
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<CreditCard> creditCards = new ArrayList<>();
 
     public User() {
     }
@@ -57,5 +59,24 @@ public class User {
 
     public void setPictureUrl(String pictureUrl) {
         this.pictureUrl = pictureUrl;
+    }
+
+    public List<CreditCard> getCreditCards() {
+        return creditCards;
+    }
+
+    public void setCreditCards(List<CreditCard> creditCards) {
+        this.creditCards = creditCards;
+    }
+
+    // Helper methods for managing bidirectional relationship
+    public void addCreditCard(CreditCard creditCard) {
+        creditCards.add(creditCard);
+        creditCard.setUser(this);
+    }
+
+    public void removeCreditCard(CreditCard creditCard) {
+        creditCards.remove(creditCard);
+        creditCard.setUser(null);
     }
 }
